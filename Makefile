@@ -1,10 +1,10 @@
-.PHONY: server tidy proto clean all build_server build
+.PHONY: server tidy proto clean all build_server build lint
 all: build
 
 server: build_server
 	./bin/server
 
-build: build_server
+build: proto build_server
 
 build_server:
 	mkdir -p bin
@@ -19,6 +19,10 @@ proto:
 tidy:
 	go mod tidy
 	go mod vendor
+
+lint:
+	go vet ./...
+	staticcheck ./...
 
 clean:
 	rm -rf bin
