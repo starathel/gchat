@@ -11,7 +11,14 @@ import (
 	"github.com/starathel/gchat/gen/hello"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+)
+
+type contextKey int
+
+const (
+	usernameKey contextKey = 0
 )
 
 type MessageStream = grpc.BidiStreamingServer[hello.HelloMessage, hello.HelloMessage]
@@ -23,17 +30,68 @@ type HelloServer struct {
 	incoming_messages chan *hello.HelloMessage
 }
 
-func (s *HelloServer) SayHello(_ context.Context, msg *hello.HelloMessage) (*hello.HelloMessage, error) {
-	if len(msg.GetUsername()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Username should be not empty")
+type wrappedStream struct {
+	grpc.ServerStream
+	ctx context.Context
+}
+
+func (s wrappedStream) Context() context.Context {
+	return s.ctx
+}
+
+func newWrappedStream(s grpc.ServerStream) wrappedStream {
+	return wrappedStream{ServerStream: s, ctx: s.Context()}
+}
+
+func AuthorizeUnary(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.InvalidArgument, "missing metadata")
+	}
+	username := md["authorization"]
+	if len(username) < 1 {
+		return handler(ctx, req)
+	}
+	return handler(context.WithValue(ctx, usernameKey, username[0]), req)
+}
+
+func AuthorizaStream(srv any, ss grpc.ServerStream, _ *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	ctx := ss.Context()
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return status.Error(codes.InvalidArgument, "missing metadata")
+	}
+	username := md["authorization"]
+	stream := newWrappedStream(ss)
+	if len(username) >= 1 {
+		stream.ctx = context.WithValue(stream.ctx, usernameKey, username[0])
+	}
+	return handler(srv, stream)
+}
+
+func authorize(ctx context.Context) error {
+	username := ctx.Value(usernameKey)
+	if username == nil {
+		return status.Error(codes.Unauthenticated, "username required")
+	}
+	return nil
+}
+
+func (s *HelloServer) SayHello(ctx context.Context, msg *hello.HelloMessage) (*hello.HelloMessage, error) {
+	err := authorize(ctx)
+	if err != nil {
+		return nil, err
 	}
 	return &hello.HelloMessage{
 		Username: "server",
-		Text:     fmt.Sprintf("Hello %s. From server", msg.Username),
+		Text:     fmt.Sprintf("Hello %s. From server", ctx.Value(usernameKey)),
 	}, nil
 }
 
 func (s *HelloServer) Chat(stream MessageStream) error {
+	if err := authorize(stream.Context()); err != nil {
+		return status.Error(codes.Unauthenticated, "stream with no username")
+	}
 	s.mu.Lock()
 	s.active_streams = append(s.active_streams, stream)
 	s.mu.Unlock()
@@ -82,7 +140,7 @@ func main() {
 		log.Fatalf("cannot start listening on 6969: %v", err)
 	}
 	fmt.Println("Started listener")
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(AuthorizeUnary), grpc.StreamInterceptor(AuthorizaStream))
 	helloServer := NewHelloServer()
 	hello.RegisterHelloServiceServer(grpcServer, helloServer)
 	go helloServer.processMessages()
