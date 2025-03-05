@@ -1,13 +1,23 @@
 syntax = "proto3";
 
-option go_package = "github.com/starathel/gchat/gen/hello";
+option go_package = "github.com/starathel/gchat/gen/chat";
 
-service HelloService {
-    rpc SayHello(HelloMessage) returns (HelloMessage);
-    rpc Chat(stream HelloMessage) returns (stream HelloMessage);
+service ChatService {
+    rpc JoinChat(stream JoinChatRequest) returns (stream MessageIncoming);
 }
 
-message HelloMessage {
+message JoinChatRequest {
+    oneof request {
+        Message message = 1;
+        string chat_id = 2;
+    }
+}
+
+message Message {
+    string text = 1;
+}
+
+message MessageIncoming {
     string username = 1;
     string text = 2;
 }
