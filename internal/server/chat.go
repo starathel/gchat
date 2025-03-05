@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"sync"
 
 	"github.com/starathel/gchat/gen/chat"
@@ -65,4 +66,18 @@ func (s *ChatServer) JoinChat(stream chatStream) error {
 			room.SendMessage(username, text)
 		}
 	}
+}
+
+func (s *ChatServer) RoomsList(context.Context, *chat.Empty) (*chat.RoomsListResponse, error) {
+	s.mu.RLock()
+	roomsData := make([]*chat.RoomsListResponse_Room, 0, len(s.rooms))
+	for _, room := range s.rooms {
+		roomsData = append(roomsData, &chat.RoomsListResponse_Room{
+			Id:        room.id,
+			UserCount: int32(len(room.users)),
+		})
+	}
+	s.mu.RUnlock()
+
+	return &chat.RoomsListResponse{Rooms: roomsData}, nil
 }
