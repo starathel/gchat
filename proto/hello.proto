@@ -6,6 +6,8 @@ service ChatService {
     rpc JoinChat(stream JoinChatRequest) returns (stream MessageIncoming);
 }
 
+// Expecting first message to contain chat_id
+// All subsequent messages with text
 message JoinChatRequest {
     oneof request {
         Message message = 1;

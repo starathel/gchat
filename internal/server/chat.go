@@ -25,9 +25,6 @@ func NewChatServer() *ChatServer {
 	}
 }
 
-func (s *ChatServer) Start() {
-}
-
 func (s *ChatServer) JoinChat(stream chatStream) error {
 	err := AuthorizationRequired(stream.Context())
 	if err != nil {

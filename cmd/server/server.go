@@ -25,7 +25,6 @@ func (s *Server) StartAndListen() error {
 	chatServer := server.NewChatServer()
 	chat.RegisterChatServiceServer(grpcServer, chatServer)
 
-	chatServer.Start()
 	fmt.Println("Starting Server")
 	err = grpcServer.Serve(l)
 	if err != nil {
