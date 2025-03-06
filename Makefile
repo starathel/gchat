@@ -1,14 +1,21 @@
-.PHONY: server tidy proto clean all build_server build lint
+.PHONY: server tidy proto clean all build_server build lint client build_client
 all: build
 
 server: build_server
 	./bin/server
 
-build: proto build_server
+client: build_client
+	./bin/client
+
+build: proto build_server build_client
 
 build_server:
 	mkdir -p bin
 	go build -o bin/server cmd/server/server.go
+
+build_client:
+	mkdir -p bin
+	go build -o bin/client cmd/client/client.go
 
 proto:
 	mkdir -p gen
