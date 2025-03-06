@@ -23,13 +23,22 @@ const (
 type model struct {
 	username string
 
-	state         appState
+	state appState
+	w, h  int
+
 	usernamePopUp components.PopUpModel
+	roomsList     components.RoomListModel
 }
 
 func newModel() model {
+	rooms := []components.RoomData{
+		{Id: "Room 1", UsersCount: 12},
+		{Id: "Room 2", UsersCount: 13},
+		{Id: "Aboba", UsersCount: 69},
+	}
 	return model{
 		usernamePopUp: components.NewValuePopUp("Username", 20, nil),
+		roomsList:     components.NewRoomListModel(rooms, 10, 10),
 	}
 }
 
@@ -41,6 +50,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.w = msg.Width
+		m.h = msg.Height
+		// TODO
+		m.roomsList.SetHeight(m.h - 20)
+		m.roomsList.SetWidth(m.w - 20)
+
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC, tea.KeyEsc:
@@ -56,7 +72,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.state = RoomsListState
 		}
 	case RoomsListState:
-		break
+		m.roomsList, cmd = m.roomsList.Update(msg)
 	default:
 		panic(fmt.Sprintf("Invalid state: %v", m.state))
 	}
@@ -68,7 +84,7 @@ func (m model) View() string {
 	case InputLoginState:
 		return m.usernamePopUp.View()
 	case RoomsListState:
-		return fmt.Sprintf("You are: %s", m.username)
+		return m.roomsList.View()
 	}
 	panic(fmt.Sprintf("Invalid state: %v", m.state))
 }
