@@ -1,5 +1,8 @@
 package components
 
+// TODO: Controls: should not leave on Esc | q
+// -     Custom controls?
+
 import (
 	"fmt"
 	"io"
