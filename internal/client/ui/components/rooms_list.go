@@ -65,7 +65,7 @@ func (i itemDelegate) Render(w io.Writer, li list.Model, index int, listItem lis
 
 	roomName := item.Id
 	if index == li.Index() {
-		roomName += "-> "
+		roomName = "-> " + roomName
 	}
 	fmt.Fprintf(w, "%s %d", roomName, item.UsersCount)
 }
