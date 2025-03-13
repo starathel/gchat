@@ -20,6 +20,8 @@ func (r RoomData) FilterValue() string { return r.Id }
 
 // NOTE: On WindowSizeMsg should you might consider calling SetWidth, SetHeight
 type RoomListModel struct {
+	SelectedRoom string
+
 	list list.Model
 }
 
@@ -42,6 +44,14 @@ func (m RoomListModel) Init() tea.Cmd {
 
 func (m RoomListModel) Update(msg tea.Msg) (RoomListModel, tea.Cmd) {
 	var cmd tea.Cmd
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyEnter:
+			m.SelectedRoom = m.list.SelectedItem().(RoomData).Id
+			return m, nil
+		}
+	}
 	m.list, cmd = m.list.Update(msg)
 	return m, cmd
 }

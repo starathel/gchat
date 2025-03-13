@@ -18,6 +18,13 @@ type appState int
 const (
 	InputLoginState appState = iota
 	RoomsListState
+	ConnectedToRoomState
+)
+
+type roomConnectionMsg int
+
+const (
+	ConnectedSuccessfully roomConnectionMsg = iota
 )
 
 type model struct {
@@ -25,6 +32,8 @@ type model struct {
 
 	state appState
 	w, h  int
+
+	roomId string
 
 	usernamePopUp components.PopUpModel
 	roomsList     components.RoomListModel
@@ -62,6 +71,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC:
 			return m, tea.Quit
 		}
+	case roomConnectionMsg:
+		switch msg {
+		case ConnectedSuccessfully:
+			m.state = ConnectedToRoomState
+			return m, nil
+		}
 	}
 
 	switch m.state {
@@ -73,6 +88,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case RoomsListState:
 		m.roomsList, cmd = m.roomsList.Update(msg)
+		if m.roomsList.SelectedRoom != "" {
+			m.roomId = m.roomsList.SelectedRoom
+			return m, connectToRoom(m.roomId)
+		}
+	case ConnectedToRoomState:
+		return m, cmd
 	default:
 		panic(fmt.Sprintf("Invalid state: %v", m.state))
 	}
@@ -85,6 +106,15 @@ func (m model) View() string {
 		return m.usernamePopUp.View()
 	case RoomsListState:
 		return m.roomsList.View()
+	case ConnectedToRoomState:
+		return fmt.Sprintf("%s connected to room %s", m.username, m.roomId)
 	}
 	panic(fmt.Sprintf("Invalid state: %v", m.state))
+}
+
+// TODO: all functions conserning connection to room should be in separate file
+func connectToRoom(_ string) tea.Cmd {
+	return func() tea.Msg {
+		return ConnectedSuccessfully
+	}
 }
